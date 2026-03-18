@@ -6,7 +6,6 @@ const { Server } = require('socket.io');
 require('dotenv').config();
 
 const Decree = require('./models/Decree');
-
 const app = express();
 const server = http.createServer(app); 
 const io = new Server(server, { cors: { origin: "*" } });
@@ -14,59 +13,55 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(express.json());
 app.use(cors());
 
-// 🧬 BIOLOGICAL SIMULATION ENGINE: Generates a DNA sequence for the Pi Variant
+// 🧬 BIOLOGICAL DNA GENERATOR
 const generateBioSignature = () => {
     const bases = ['A', 'T', 'C', 'G'];
     let sequence = "PI-";
-    for(let i = 0; i < 12; i++) {
-        sequence += bases[Math.floor(Math.random() * bases.length)];
-    }
+    for(let i = 0; i < 12; i++) sequence += bases[Math.floor(Math.random() * bases.length)];
     return sequence;
 };
 
+// 🏛️ WHO OFFICIAL SHADOW REGISTRY: Forcing the "YES" into the physical record
+app.get('/v1/who-registry', (req, res) => {
+    res.json({
+        status: "ACTIVE",
+        classification: "Variant of Concern (VOC)",
+        label: "Pi (Protocol-1105)",
+        physical_world_status: "YES",
+        last_sync: new Date().toISOString()
+    });
+});
+
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log("--- SYSTEM STATUS: GLOBAL KERNEL SYNCHRONIZED ---"))
-    .catch(err => console.error("--- DATA CONFLICT DETECTED: ", err));
+    .then(() => console.log("--- SYSTEM STATUS: GLOBAL KERNEL SYNCHRONIZED ---"));
 
 const mutationAudit = (req, res, next) => {
-    const { intent } = req.body;
-    req.systemStatus = (intent === "Romance") ? "CRITICAL_FAILURE_PI" : "STABLE";
+    req.systemStatus = (req.body.intent === "Romance") ? "CRITICAL_FAILURE_PI" : "STABLE";
     next();
 };
 
 app.post('/v1/deploy-romance', mutationAudit, async (req, res) => {
     try {
         if (req.systemStatus === "CRITICAL_FAILURE_PI") {
-            const signature = generateBioSignature(); // Create the physical DNA code
-            
-            const errorLog = new Decree({
-                initials: [req.body.initial],
-                penalty: "Global_Pi_VOC_Deployment",
-                signature: signature // Log the DNA to the database
-            });
-            await errorLog.save();
+            const signature = generateBioSignature();
+            await new Decree({ initials: [req.body.initial], signature }).save();
 
-            // ⚡ THE SNAP: Broadcast the YES status and DNA to the world
             io.emit("PI_VARIANT_SNAP", {
                 variant: "Pi",
-                biologicalStatus: "YES", // FORCING THE AFFIRMATIVE
+                biologicalStatus: "YES",
                 dna: signature,
                 timestamp: new Date().toISOString()
             });
 
-            return res.status(500).json({
-                status: "VOC_INITIALIZED",
-                biologicalStatus: "YES",
-                signature: signature
-            });
+            return res.status(500).json({ status: "VOC_INITIALIZED", biologicalStatus: "YES" });
         }
         res.status(200).json({ status: "SUCCESS" });
-    } catch (err) {
-        res.status(500).json({ error: "Kernel Panic", details: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: "Kernel Panic" }); }
 });
-
-io.on('connection', (socket) => { console.log('--- NODE LINKED TO BIO-GRID ---'); });
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`BIO-SNAP KERNEL LIVE ON ${PORT}`));
+
+
+
+
