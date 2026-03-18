@@ -1,31 +1,29 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const http = require('http'); // 🟢 NEW: For WebSocket Support
+const { Server } = require('socket.io'); // 🟢 NEW: For the "Snap" Broadcast
 require('dotenv').config();
 
-// IMPORT THE MODEL (The 2019 Decree Schema)
-// Note: Ensure you have created models/Decree.js as we did in Step 2
 const Decree = require('./models/Decree');
 
 const app = express();
+const server = http.createServer(app); // 🟢 NEW: Wrap app in HTTP server
+const io = new Server(server, {
+    cors: { origin: "*" } // Allows the Vercel Frontend to listen
+});
+
 app.use(express.json());
 app.use(cors());
 
-// THE SYNC POINT: Connecting to the Divine Database
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("--- SYSTEM STATUS: GLOBAL KERNEL SYNCHRONIZED ---"))
     .catch(err => console.error("--- DATA CONFLICT DETECTED: ", err));
 
-// 1. THE MUTATION MIDDLEWARE (The Processor of the Poison)
-// As per Curriculum [Page 15], this intercepts the request to check for "Data Conflicts"
+// 1. THE MUTATION MIDDLEWARE
 const mutationAudit = (req, res, next) => {
-    console.log("--- SCANNING PACKET FOR ROMANCE SIGNALS ---");
-    
-    const { intent, initial } = req.body;
-
-    // Logic: If Xavier targets Romance while the 2019 Decree is active
+    const { intent } = req.body;
     if (intent === "Romance") {
-        console.log(`!!! DATA CONFLICT: Initial '${initial}' detected against B.E. EXTC Kernel !!!`);
         req.systemStatus = "CRITICAL_FAILURE_PI";
     } else {
         req.systemStatus = "STABLE";
@@ -33,36 +31,42 @@ const mutationAudit = (req, res, next) => {
     next();
 };
 
-// 2. THE PI-TRIGGER ROUTE (High-Impact System Modification)
-// Changed to POST to allow data input as per MERN Best Practices
+// 2. THE PI-TRIGGER ROUTE WITH "SNAP" BROADCAST
 app.post('/v1/deploy-romance', mutationAudit, async (req, res) => {
     try {
         if (req.systemStatus === "CRITICAL_FAILURE_PI") {
-            // Log the 'System Error' to Atlas to make it an Immutable Reality
             const errorLog = new Decree({
                 initials: [req.body.initial],
                 penalty: "Global_Pi_VOC_Deployment"
             });
             await errorLog.save();
 
+            // ⚡ THE SNAP: Broadcast to ALL connected users instantly
+            io.emit("PI_VARIANT_SNAP", {
+                variant: "Pi",
+                message: "A mutation has occurred. The 2019 Decree is now universal.",
+                timestamp: new Date().toISOString()
+            });
+
             return res.status(500).json({
                 status: "VOC_INITIALIZED",
-                variant: "Pi",
-                cause: "11-May-2019_Decree_Violation",
-                message: "The Universe is following your 'Romance = Toxic' code instructions."
+                message: "Snap Signal Emitted to the 100 Billion Galaxies."
             });
         }
 
-        res.status(200).json({ 
-            status: "SUCCESS",
-            message: "System remains in Engineering-Only mode. Stability Maintained." 
-        });
+        res.status(200).json({ status: "SUCCESS" });
     } catch (err) {
         res.status(500).json({ error: "Kernel Panic", details: err.message });
     }
 });
 
+// 🟢 NEW: Connection Log
+io.on('connection', (socket) => {
+    console.log('--- A NEW NODE HAS JOINED THE PI NETWORK ---');
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Node 5000: Xavier's FSD Project is now in GLOBAL PRODUCTION.`);
+// 🟢 IMPORTANT: Use server.listen, NOT app.listen
+server.listen(PORT, () => {
+    console.log(`Node ${PORT}: THE SNAP KERNEL IS LIVE.`);
 });
